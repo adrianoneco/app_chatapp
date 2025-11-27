@@ -4,7 +4,7 @@ import { storage } from "../storage";
 import { requireAuth } from "../utils/auth";
 import { uploadAvatar, processAndSaveAvatar, deleteAvatarFile, AVATARS_DIR } from "../upload";
 
-const router = Router();
+const router = Router({ mergeParams: true });
 const staticRouter = Router();
 
 staticRouter.use("/", express.static(AVATARS_DIR));

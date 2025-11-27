@@ -1,7 +1,6 @@
 export interface WebhookPayload {
   event: string;
-  data: Record<string, any>;
-  timestamp: string;
+  [key: string]: any;
 }
 
 export async function sendWebhook(
@@ -24,7 +23,7 @@ export async function sendWebhook(
   try {
     const payload: WebhookPayload = {
       event,
-      data,
+      ...data,
       timestamp: new Date().toISOString(),
     };
 
@@ -70,12 +69,10 @@ export async function sendRecoveryCheckWebhook(
 
   try {
     const payload: WebhookPayload = {
-      event: "recovery.check",
-      data: {
-        email,
-        celular,
-        external_id: externalId,
-      },
+      event: "auth.recovery.check",
+      email,
+      celular,
+      external_id: externalId,
       timestamp: new Date().toISOString(),
     };
 
@@ -124,16 +121,14 @@ export async function sendRecoveryRequestWebhook(
 
   try {
     const payload: WebhookPayload = {
-      event: "recovery.request",
-      data: {
-        method,
-        email,
-        celular,
-        external_id: externalId,
-        userName,
-        token,
-        resetUrl,
-      },
+      event: "auth.recovery.request",
+      method,
+      email,
+      celular,
+      external_id: externalId,
+      userName,
+      token,
+      resetUrl,
       timestamp: new Date().toISOString(),
     };
 

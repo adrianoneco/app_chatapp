@@ -136,11 +136,22 @@ All API routes accept authentication via:
 All webhook requests include:
 - `Authorization: Bearer <GLOBAL_API_KEY>` header
 - `X-API-Key: <GLOBAL_API_KEY>` header
-- JSON payload with `event`, `data`, and `timestamp` fields
+- JSON payload with `event` as first key, followed by event-specific data and `timestamp`
+
+Example payload structure:
+```json
+{
+  "event": "auth.recovery.check",
+  "email": "user@example.com",
+  "celular": "+5511999999999",
+  "external_id": "ext-123",
+  "timestamp": "2024-01-01T12:00:00.000Z"
+}
+```
 
 #### Recovery Events
-- `recovery.check`: Check available recovery methods (email/whatsapp)
-- `recovery.request`: Request password recovery via specific method
+- `auth.recovery.check`: Check available recovery methods (email/whatsapp)
+- `auth.recovery.request`: Request password recovery via specific method (includes: method, email, celular, external_id, userName, token, resetUrl)
 
 ## Password Recovery (Dual Method)
 - **Email Recovery**: Uses SMTP configuration to send password reset emails
@@ -148,10 +159,11 @@ All webhook requests include:
 
 ### Recovery Flow
 1. User enters email address
-2. System sends webhook with `event=recovery.check` containing: email, celular, external_id
+2. System sends webhook with `event=auth.recovery.check` containing: email, celular, external_id
 3. Webhook response returns available methods (email and/or whatsapp)
 4. User selects preferred recovery method
-5. System sends webhook with `event=recovery.request` containing: method, email, celular, external_id, userName, token, resetUrl
+5. For email: System sends email via SMTP (using SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD)
+6. For WhatsApp: System sends webhook with `event=auth.recovery.request` containing: method, email, celular, external_id, userName, token, resetUrl
 
 ## Third-Party Libraries
 

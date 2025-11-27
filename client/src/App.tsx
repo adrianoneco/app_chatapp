@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,23 +6,30 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth";
 import Dashboard from "@/pages/home";
-import { useEffect } from "react";
+import { AuthProvider, ProtectedRoute, useAuth } from "@/lib/auth";
 
 function Router() {
-  const [location, setLocation] = useLocation();
+  const { user, isLoading } = useAuth();
 
-  // Simple redirect for demo purposes - in a real app this would check auth state
-  useEffect(() => {
-    if (location === "/login") {
-      setLocation("/auth");
-    }
-  }, [location, setLocation]);
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <Switch>
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/" component={Dashboard} />
-      {/* Add more routes as needed */}
+      {/* Public Routes */}
+      <Route path="/auth">
+        {user ? <Redirect to="/" /> : <AuthPage />}
+      </Route>
+      
+      {/* Protected Routes */}
+      <ProtectedRoute path="/" component={Dashboard} />
+      
+      {/* Fallback */}
       <Route component={NotFound} />
     </Switch>
   );
@@ -32,8 +39,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Router />
+        <AuthProvider>
+          <Toaster />
+          <Router />
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

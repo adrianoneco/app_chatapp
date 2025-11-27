@@ -2,15 +2,15 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Mail, Lock, User, ArrowRight, ArrowLeft } from "lucide-react";
+import { Loader2, Mail, Lock, User, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import logoImage from "@assets/generated_images/abstract_tech_logo_with_blue_and_purple_gradients.png";
+import { useAuth } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 // Schemas
 const loginSchema = z.object({
@@ -36,8 +36,8 @@ type AuthMode = "login" | "register" | "recovery";
 
 export default function AuthPage() {
   const [mode, setMode] = useState<AuthMode>("login");
-  const [isLoading, setIsLoading] = useState(false);
-  const [, setLocation] = useLocation();
+  const { login, register, isLoading } = useAuth();
+  const { toast } = useToast();
 
   // Forms
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -54,28 +54,45 @@ export default function AuthPage() {
 
   // Handlers
   const onLogin = async (data: z.infer<typeof loginSchema>) => {
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    console.log("Login data:", data);
-    setLocation("/");
+    try {
+      await login(data.email);
+      toast({
+        title: "Login realizado com sucesso",
+        description: "Bem-vindo de volta!",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao entrar",
+        description: "Verifique suas credenciais e tente novamente.",
+      });
+    }
   };
 
   const onRegister = async (data: z.infer<typeof registerSchema>) => {
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    console.log("Register data:", data);
-    setMode("login");
+    try {
+      await register(data.email, data.name);
+      toast({
+        title: "Conta criada com sucesso",
+        description: "Sua conta foi criada e você já está logado.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao cadastrar",
+        description: "Não foi possível criar sua conta.",
+      });
+    }
   };
 
   const onRecovery = async (data: z.infer<typeof recoverySchema>) => {
-    setIsLoading(true);
+    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
     console.log("Recovery data:", data);
-    // Show success message or switch back to login
+    toast({
+      title: "Email enviado",
+      description: "Verifique sua caixa de entrada para redefinir a senha.",
+    });
     setMode("login");
   };
 

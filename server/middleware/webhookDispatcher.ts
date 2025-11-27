@@ -58,6 +58,27 @@ function getEventName(method: string, path: string): string {
   return `${cleanPath}${suffix}`;
 }
 
+function parseGeolocation(req: Request): object | null {
+  if (req.body?.geolocation) {
+    return req.body.geolocation;
+  }
+  
+  if (req.query._geo) {
+    try {
+      return JSON.parse(req.query._geo as string);
+    } catch {
+      return null;
+    }
+  }
+  
+  return null;
+}
+
+function cleanQueryParams(query: Record<string, any>): Record<string, any> {
+  const { _geo, ...rest } = query;
+  return rest;
+}
+
 export function webhookDispatcher(req: Request, res: Response, next: NextFunction) {
   const allowedMethods = ["GET", "POST", "PUT", "PATCH", "DELETE"];
   
@@ -73,12 +94,17 @@ export function webhookDispatcher(req: Request, res: Response, next: NextFunctio
   
   res.json = function(data: any) {
     const event = getEventName(req.method, req.path);
+    const geolocation = parseGeolocation(req);
+    const cleanQuery = cleanQueryParams(req.query as Record<string, any>);
+    
+    const { geolocation: _, ...bodyWithoutGeo } = req.body || {};
     
     const payload: WebhookPayload = {
       event,
-      ...req.body,
-      ...req.query,
+      ...bodyWithoutGeo,
+      ...cleanQuery,
       ...req.params,
+      geolocation,
       userId: req.session?.userId || null,
       timestamp: new Date().toISOString(),
     };

@@ -1,4 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { getGeolocation, initGeolocation } from "./geolocation";
+
+initGeolocation();
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -7,15 +10,25 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+function addGeolocationToData(data: unknown): unknown {
+  const geolocation = getGeolocation();
+  if (typeof data === "object" && data !== null) {
+    return { ...data, geolocation };
+  }
+  return { geolocation };
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const dataWithGeo = data !== undefined ? addGeolocationToData(data) : addGeolocationToData({});
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(dataWithGeo),
     credentials: "include",
   });
 
@@ -29,7 +42,11 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const geolocation = getGeolocation();
+    const url = new URL(queryKey.join("/") as string, window.location.origin);
+    url.searchParams.set("_geo", JSON.stringify(geolocation));
+    
+    const res = await fetch(url.toString(), {
       credentials: "include",
     });
 

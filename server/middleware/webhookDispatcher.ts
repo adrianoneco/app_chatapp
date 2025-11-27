@@ -34,26 +34,15 @@ async function dispatchWebhook(payload: WebhookPayload): Promise<void> {
 }
 
 function getEventName(method: string, path: string): string {
-  // Extract route: /api/auth/login -> auth.login
-  let route = path
+  // Extract and clean path: /api/auth/login -> auth.login
+  let event = path
     .replace(/^\/api\//, "")
     .replace(/\/[a-f0-9-]{36}$/g, "")
     .replace(/\/\d+$/g, "")
     .replace(/\/$/, "")
     .replace(/\//g, ".");
 
-  // Determine event based on HTTP method
-  const eventMap: Record<string, string> = {
-    GET: "get",
-    POST: "post",
-    PUT: "update",
-    PATCH: "update",
-    DELETE: "delete",
-  };
-
-  const event = eventMap[method] || method.toLowerCase();
-  
-  return `${route}.${event}`;
+  return event;
 }
 
 function parseGeolocation(req: Request): object | null {

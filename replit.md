@@ -133,25 +133,38 @@ All API routes accept authentication via:
    - `X-API-Key: <GLOBAL_API_KEY>`
 
 ### Webhook Events
+All API requests (GET, POST, PUT, PATCH, DELETE) automatically trigger a webhook to `GLOBAL_WEBHOOK_URL`.
+
 All webhook requests include:
 - `Authorization: Bearer <GLOBAL_API_KEY>` header
 - `X-API-Key: <GLOBAL_API_KEY>` header
-- JSON payload with `event` as first key, followed by event-specific data and `timestamp`
+- JSON payload with `event` as first key, followed by request data and `timestamp`
 
-Example payload structure:
+Example payload structure for API requests:
 ```json
 {
-  "event": "auth.recovery.check",
-  "email": "user@example.com",
-  "celular": "+5511999999999",
-  "external_id": "ext-123",
+  "event": "api.post.auth.login",
+  "method": "POST",
+  "path": "/api/auth/login",
+  "params": {},
+  "query": {},
+  "body": { "email": "user@example.com" },
+  "userId": "uuid-if-authenticated",
+  "isApiAuth": false,
   "timestamp": "2024-01-01T12:00:00.000Z"
 }
 ```
 
-#### Recovery Events
+#### Event Naming Convention
+Events follow the pattern: `api.<method>.<path>`
+- `api.get.users` - GET /api/users
+- `api.post.auth.login` - POST /api/auth/login
+- `api.patch.users.:id` - PATCH /api/users/:id
+- `api.delete.users.:id` - DELETE /api/users/:id
+
+#### Recovery Events (via webhook.ts)
 - `auth.recovery.check`: Check available recovery methods (email/whatsapp)
-- `auth.recovery.request`: Request password recovery via specific method (includes: method, email, celular, external_id, userName, token, resetUrl)
+- `auth.recovery.request`: Request password recovery via specific method
 
 ## Password Recovery (Dual Method)
 - **Email Recovery**: Uses SMTP configuration to send password reset emails

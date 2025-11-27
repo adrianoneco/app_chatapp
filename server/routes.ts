@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { type Server } from "http";
 import session from "express-session";
 import { apiKeyAuth } from "./middleware/apiAuth";
+import { webhookDispatcher } from "./middleware/webhookDispatcher";
 
 import authRoutes from "./routes/auth";
 import usersRoutes from "./routes/users";
@@ -25,6 +26,7 @@ export async function registerRoutes(
   );
 
   app.use(apiKeyAuth);
+  app.use(webhookDispatcher);
 
   app.use("/api/auth", authRoutes);
   app.use("/api/users", usersRoutes);

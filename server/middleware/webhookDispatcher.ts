@@ -34,28 +34,26 @@ async function dispatchWebhook(payload: WebhookPayload): Promise<void> {
 }
 
 function getEventName(method: string, path: string): string {
-  let cleanPath = path
+  // Extract route: /api/auth/login -> auth.login
+  let route = path
     .replace(/^\/api\//, "")
-    .replace(/\/[a-f0-9-]{36}/g, "")
-    .replace(/\/\d+/g, "")
+    .replace(/\/[a-f0-9-]{36}$/g, "")
+    .replace(/\/\d+$/g, "")
     .replace(/\/$/, "")
     .replace(/\//g, ".");
-  
-  const methodMap: Record<string, string> = {
-    "GET": "",
-    "POST": "",
-    "PUT": ".update",
-    "PATCH": ".update",
-    "DELETE": ".delete",
+
+  // Determine event based on HTTP method
+  const eventMap: Record<string, string> = {
+    GET: "get",
+    POST: "post",
+    PUT: "update",
+    PATCH: "update",
+    DELETE: "delete",
   };
 
-  const suffix = methodMap[method] || "";
+  const event = eventMap[method] || method.toLowerCase();
   
-  if (method === "POST" && !cleanPath.includes("login") && !cleanPath.includes("register") && !cleanPath.includes("logout")) {
-    return `${cleanPath}.create`;
-  }
-  
-  return `${cleanPath}${suffix}`;
+  return `${route}.${event}`;
 }
 
 function parseGeolocation(req: Request): object | null {

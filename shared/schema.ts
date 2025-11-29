@@ -106,6 +106,13 @@ export const insertConversationSchema = createInsertSchema(conversations).omit({
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type Conversation = typeof conversations.$inferSelect;
 
+// Extended conversation type with client info from JOIN
+export type ConversationWithClient = Conversation & {
+  clientName: string | null;
+  clientEmail: string | null;
+  clientPhone: string | null;
+};
+
 // Messages
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -41,7 +41,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ForwardModal } from "@/components/forward-modal";
-import type { Conversation, Message } from "@shared/schema";
+import type { ConversationWithClient, Message } from "@shared/schema";
 import { useAuth } from "@/lib/auth";
 import {
   QuotedMessageBubble,
@@ -56,77 +56,6 @@ import {
   MessageWrapper
 } from "@/components/message-types";
 
-const mockConversations: (Conversation & { unreadCount: number; lastMessage: string })[] = [
-  {
-    id: "1",
-    protocol: "ATD-2024-001234",
-    clientId: "c1",
-    clientName: "MARIA SILVA",
-    clientEmail: "maria.silva@email.com",
-    clientPhone: "+55 11 99999-1234",
-    attendantId: "a1",
-    channel: "whatsapp",
-    status: "open",
-    priority: "high",
-    subject: "Problema com pedido",
-    latitude: "-23.5505",
-    longitude: "-46.6333",
-    city: "Sao Paulo",
-    state: "SP",
-    country: "Brasil",
-    lastMessageAt: new Date(),
-    closedAt: null,
-    createdAt: new Date(),
-    unreadCount: 3,
-    lastMessage: "Ola, preciso de ajuda com meu pedido #12345",
-  },
-  {
-    id: "2",
-    protocol: "ATD-2024-001235",
-    clientId: "c2",
-    clientName: "JOAO SANTOS",
-    clientEmail: "joao.santos@email.com",
-    clientPhone: "+55 21 98888-5678",
-    attendantId: "a1",
-    channel: "web",
-    status: "pending",
-    priority: "normal",
-    subject: "Duvida sobre produto",
-    latitude: "-22.9068",
-    longitude: "-43.1729",
-    city: "Rio de Janeiro",
-    state: "RJ",
-    country: "Brasil",
-    lastMessageAt: new Date(Date.now() - 3600000),
-    closedAt: null,
-    createdAt: new Date(Date.now() - 86400000),
-    unreadCount: 0,
-    lastMessage: "Qual o prazo de entrega para minha regiao?",
-  },
-  {
-    id: "3",
-    protocol: "ATD-2024-001236",
-    clientId: "c3",
-    clientName: "ANA OLIVEIRA",
-    clientEmail: "ana.oliveira@email.com",
-    clientPhone: "+55 31 97777-9012",
-    attendantId: null,
-    channel: "telegram",
-    status: "open",
-    priority: "urgent",
-    subject: "Reclamacao urgente",
-    latitude: "-19.9167",
-    longitude: "-43.9345",
-    city: "Belo Horizonte",
-    state: "MG",
-    country: "Brasil",
-    lastMessageAt: new Date(Date.now() - 1800000),
-    closedAt: null,
-    createdAt: new Date(Date.now() - 172800000),
-    unreadCount: 5,
-    lastMessage: "Preciso resolver isso urgentemente!",
-  },
-];
 
 const mockMessages: any[] = [
   {
@@ -312,10 +241,10 @@ export default function ConversationsPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [match, params] = useRoute("/conversation/:channelSlug/:conversationId");
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversations] = useState<ConversationWithClient[]>([]);
   const [channels, setChannels] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<ConversationWithClient | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [copiedProtocol, setCopiedProtocol] = useState(false);
@@ -333,23 +262,13 @@ export default function ConversationsPage() {
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Load user preferences
+  // Load user preferences from localStorage
   useEffect(() => {
-    if (user) {
-      if (user.conversationsSidebarWidth) {
-        setLeftSidebarWidth(user.conversationsSidebarWidth);
-      }
-      if (user.conversationsSidebarCollapsed !== undefined) {
-        setIsLeftSidebarCollapsed(user.conversationsSidebarCollapsed);
-      }
-    } else {
-      // Fallback to localStorage
-      const savedWidth = localStorage.getItem("conversationsSidebarWidth");
-      const savedCollapsed = localStorage.getItem("conversationsSidebarCollapsed");
-      if (savedWidth) setLeftSidebarWidth(parseInt(savedWidth));
-      if (savedCollapsed) setIsLeftSidebarCollapsed(savedCollapsed === "true");
-    }
-  }, [user]);
+    const savedWidth = localStorage.getItem("conversationsSidebarWidth");
+    const savedCollapsed = localStorage.getItem("conversationsSidebarCollapsed");
+    if (savedWidth) setLeftSidebarWidth(parseInt(savedWidth));
+    if (savedCollapsed) setIsLeftSidebarCollapsed(savedCollapsed === "true");
+  }, []);
 
   // Load channels
   useEffect(() => {
@@ -428,7 +347,8 @@ export default function ConversationsPage() {
 
   const filteredConversations = conversations.filter(
     (conv) => {
-      const matchesSearch = conv.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const clientName = conv.clientName || "";
+      const matchesSearch = clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         conv.protocol.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesTab = 
@@ -441,7 +361,7 @@ export default function ConversationsPage() {
   );
 
   // Handle conversation selection
-  const handleSelectConversation = (conversation: Conversation) => {
+  const handleSelectConversation = (conversation: ConversationWithClient) => {
     const channel = channels.find(ch => ch.id === conversation.channelId);
     if (channel?.slug) {
       navigate(`/conversation/${channel.slug}/${conversation.id}`);
@@ -731,13 +651,13 @@ export default function ConversationsPage() {
                           <div className="flex items-start gap-3">
                     <Avatar className="h-10 w-10 border border-border/50">
                       <AvatarFallback className="bg-secondary text-xs">
-                        {conversation.clientName.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                        {(conversation.clientName || "").split(" ").map((n: string) => n[0]).join("").slice(0, 2) || "?"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium text-sm truncate">
-                          {conversation.clientName}
+                          {conversation.clientName || "Sem nome"}
                         </span>
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
                           {formatDate(conversation.lastMessageAt!)}
@@ -800,11 +720,11 @@ export default function ConversationsPage() {
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10 border border-border/50">
                     <AvatarFallback className="bg-secondary">
-                      {selectedConversation.clientName.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                      {(selectedConversation.clientName || "").split(" ").map((n: string) => n[0]).join("").slice(0, 2) || "?"}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-semibold">{selectedConversation.clientName}</h3>
+                    <h3 className="font-semibold">{selectedConversation.clientName || "Sem nome"}</h3>
                     <p className="text-xs text-muted-foreground">{selectedConversation.subject}</p>
                   </div>
                 </div>

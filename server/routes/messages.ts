@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { storage } from "../storage";
 import { messages, conversations, users } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
@@ -6,6 +7,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pkg from "pg";
 const { Pool } = pkg;
 import * as schema from "@shared/schema";
+import { uploadMedia, MEDIA_DIR } from "../upload";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool, { schema });
@@ -414,6 +416,46 @@ export function registerMessageRoutes(app: Express) {
       res.json({ conversation: conversationWithUser });
     } catch (error: any) {
       console.error("Error creating conversation:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Serve media files
+  app.use("/api/media", express.static(MEDIA_DIR));
+
+  // Upload media file
+  app.post("/api/upload", uploadMedia.single("file"), async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Não autorizado" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: "Nenhum arquivo enviado" });
+      }
+
+      const fileUrl = `/api/media/${req.file.filename}`;
+      
+      // Determine content type based on mimetype
+      let contentType = "file";
+      if (req.file.mimetype.startsWith("image/")) {
+        contentType = "image";
+      } else if (req.file.mimetype.startsWith("video/")) {
+        contentType = "video";
+      } else if (req.file.mimetype.startsWith("audio/")) {
+        contentType = "audio";
+      }
+
+      res.json({
+        success: true,
+        fileUrl,
+        contentType,
+        originalName: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+      });
+    } catch (error: any) {
+      console.error("Error uploading file:", error);
       res.status(500).json({ error: error.message });
     }
   });

@@ -9,6 +9,7 @@ import usersRoutes from "./routes/users";
 import avatarRoutes, { avatarStaticRouter } from "./routes/avatar";
 import { registerMessageRoutes } from "./routes/messages";
 import { registerChannelRoutes } from "./routes/channels";
+import { registerAIRoutes } from "./routes/ai";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -36,6 +37,7 @@ export async function registerRoutes(
   app.use("/api/users/:id/avatar", avatarRoutes);
   registerMessageRoutes(app);
   registerChannelRoutes(app);
+  registerAIRoutes(app);
 
   return httpServer;
 }

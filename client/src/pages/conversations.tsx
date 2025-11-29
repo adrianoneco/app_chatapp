@@ -55,6 +55,7 @@ import {
   MessageReactions,
   MessageWrapper
 } from "@/components/message-types";
+import { EnhancedMessageInput } from "@/components/enhanced-message-input";
 
 
 const mockMessages: any[] = [
@@ -399,6 +400,65 @@ export default function ConversationsPage() {
       toast({
         title: "Erro",
         description: "Falha ao enviar mensagem",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
+  // Send media message
+  const handleSendMedia = async (type: string, file: File, metadata?: any) => {
+    if (!selectedConversation) return;
+
+    try {
+      setIsSendingMessage(true);
+
+      // Upload file first
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const uploadResponse = await fetch("/api/upload", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Falha ao fazer upload do arquivo");
+      }
+
+      const uploadData = await uploadResponse.json();
+
+      // Send message with file
+      const response = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          conversationId: selectedConversation.id,
+          content: file.name,
+          contentType: uploadData.contentType,
+          fileUrl: uploadData.fileUrl,
+          duration: metadata?.duration,
+          quotedMessageId: replyToMessage?.id,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessages([...messages, data.message]);
+        setReplyToMessage(null);
+        toast({
+          title: "Arquivo enviado",
+          description: "Seu arquivo foi enviado com sucesso",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to send media:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao enviar arquivo",
         variant: "destructive",
       });
     } finally {
@@ -912,52 +972,16 @@ export default function ConversationsPage() {
 
               {/* Message Input */}
               <div className="p-4 border-t border-border/40">
-                {replyToMessage && (
-                  <div className="mb-3 p-2 bg-secondary/50 rounded-lg flex items-start gap-2">
-                    <Reply className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-primary">{replyToMessage.senderName}</p>
-                      <p className="text-xs text-muted-foreground truncate">{replyToMessage.content}</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0"
-                      onClick={() => setReplyToMessage(null)}
-                    >
-                      ✕
-                    </Button>
-                  </div>
-                )}
-                <div className="flex items-center gap-3">
-                  <Input
-                    placeholder="Digite sua mensagem..."
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    className="flex-1 bg-secondary/50 border-border/50"
-                    data-testid="input-message"
-                    disabled={isSendingMessage}
-                  />
-                  <Button 
-                    size="icon" 
-                    className="bg-primary" 
-                    data-testid="button-send-message"
-                    onClick={handleSendMessage}
-                    disabled={isSendingMessage || !messageInput.trim()}
-                  >
-                    {isSendingMessage ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
+                <EnhancedMessageInput
+                  value={messageInput}
+                  onChange={setMessageInput}
+                  onSend={handleSendMessage}
+                  onSendMedia={handleSendMedia}
+                  disabled={false}
+                  isSending={isSendingMessage}
+                  replyToMessage={replyToMessage}
+                  onClearReply={() => setReplyToMessage(null)}
+                />
               </div>
             </>
           ) : (

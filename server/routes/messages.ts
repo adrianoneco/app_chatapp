@@ -270,24 +270,19 @@ export function registerMessageRoutes(app: Express) {
 
   // Get conversations (for forward modal)
   app.get("/api/conversations", async (req, res) => {
-    console.log('[DEBUG] GET /api/conversations called');
     try {
       if (!req.session.userId) {
-        console.log('[DEBUG] No session userId');
         return res.status(401).json({ error: "Não autorizado" });
       }
 
       const user = await storage.getUser(req.session.userId);
       if (!user) {
-        console.log('[DEBUG] User not found');
         return res.status(401).json({ error: "Usuário não encontrado" });
       }
       
-      console.log('[DEBUG] User:', user.email, 'Role:', user.role);
       let conversationList;
       if (user.role === "admin") {
         // Admins see all conversations with client info from users table
-        console.log('[DEBUG] Fetching conversations for admin...');
         conversationList = await db
           .select({
             id: conversations.id,
@@ -315,8 +310,6 @@ export function registerMessageRoutes(app: Express) {
           .from(conversations)
           .leftJoin(users, eq(conversations.clientId, users.id))
           .orderBy(desc(conversations.createdAt));
-        
-        console.log('[DEBUG] Found conversations:', conversationList.length);
       } else {
         // Clients see only their conversations
         conversationList = await db

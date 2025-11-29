@@ -384,7 +384,7 @@ export default function ConversationsPage() {
       }
     };
     loadConversations();
-  }, []);
+  }, [params?.conversationId]); // Recarrega quando a URL muda
 
   // Handle URL params and select conversation
   useEffect(() => {

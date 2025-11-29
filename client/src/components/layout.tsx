@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as React from "react";
 import { Link, useLocation } from "wouter";
 import { 
   LayoutDashboard, 
@@ -32,6 +33,13 @@ export function Layout({ children }: LayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [location] = useLocation();
   const { user, logout } = useAuth();
+
+  // Load main sidebar state from user preferences
+  React.useEffect(() => {
+    if (user?.mainSidebarCollapsed !== undefined) {
+      setIsCollapsed(user.mainSidebarCollapsed);
+    }
+  }, [user]);
 
   const navItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/" },
@@ -109,8 +117,21 @@ export function Layout({ children }: LayoutProps) {
         >
           {/* Toggle Button - Centered Vertically on the right edge */}
           <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="absolute -right-3 top-1/2 -translate-y-1/2 z-20 bg-primary text-primary-foreground rounded-full p-1 shadow-lg shadow-primary/30 hover:bg-primary/90 transition-colors border border-background"
+            onClick={async () => {
+              const newState = !isCollapsed;
+              setIsCollapsed(newState);
+              try {
+                await fetch("/api/users/preferences", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({ mainSidebarCollapsed: newState }),
+                });
+              } catch (error) {
+                console.error("Failed to save main sidebar state:", error);
+              }
+            }}
+            className="absolute -right-3 top-1/2 -translate-y-1/2 z-50 bg-primary text-primary-foreground rounded-full p-1 shadow-lg shadow-primary/30 hover:bg-primary/90 transition-colors border border-background"
           >
             {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
@@ -165,7 +186,7 @@ export function Layout({ children }: LayoutProps) {
             <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-purple-600/5 blur-[100px]" />
           </div>
           
-          <div className="max-w-6xl mx-auto animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
+          <div className="w-full h-full animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
             {children}
           </div>
         </main>

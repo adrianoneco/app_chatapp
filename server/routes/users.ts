@@ -110,4 +110,39 @@ router.delete("/:id", requireAuth, async (req, res) => {
   }
 });
 
+router.patch("/preferences", requireAuth, async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      return res.status(401).json({ error: "Não autorizado" });
+    }
+
+    const { mainSidebarCollapsed, conversationsSidebarWidth, conversationsSidebarCollapsed } = req.body;
+    
+    const updates: any = {};
+    if (typeof mainSidebarCollapsed === "boolean") {
+      updates.mainSidebarCollapsed = mainSidebarCollapsed;
+    }
+    if (typeof conversationsSidebarWidth === "number") {
+      updates.conversationsSidebarWidth = conversationsSidebarWidth;
+    }
+    if (typeof conversationsSidebarCollapsed === "boolean") {
+      updates.conversationsSidebarCollapsed = conversationsSidebarCollapsed;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "Nenhuma preferência para atualizar" });
+    }
+
+    const user = await storage.updateUser(req.session.userId, updates);
+    if (!user) {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error("Update preferences error:", error);
+    res.status(500).json({ error: "Erro ao atualizar preferências" });
+  }
+});
+
 export default router;

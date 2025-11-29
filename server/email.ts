@@ -113,15 +113,15 @@ export interface RecoveryMethodsResponse {
 
 export async function checkRecoveryMethods(
   email: string,
-  celular: string | null,
+  mobilePhone: string | null,
   externalId: string | null
-): Promise<RecoveryMethodsResponse> {
-  return sendRecoveryCheckWebhook(email, celular, externalId);
+): Promise<RecoveryMethods> {
+  return sendRecoveryCheckWebhook(email, mobilePhone, externalId);
 }
 
 export async function sendPasswordResetWhatsApp(
   email: string,
-  celular: string | null,
+  mobilePhone: string | null,
   externalId: string | null,
   userName: string,
   token: string
@@ -137,7 +137,7 @@ export async function sendPasswordResetWhatsApp(
   return sendRecoveryRequestWebhook(
     "whatsapp",
     email,
-    celular,
+    mobilePhone,
     externalId,
     userName,
     token,

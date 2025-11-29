@@ -32,8 +32,10 @@ import {
   X,
   Phone,
   Users,
-  UserCog
+  UserCog,
+  MessageCircle
 } from "lucide-react";
+import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -68,7 +70,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  celular?: string;
+  mobilePhone?: string;
   externalId?: string;
   role: "admin" | "client";
   status: "active" | "inactive";
@@ -79,7 +81,7 @@ interface User {
 const userSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
   email: z.string().email("Email inválido"),
-  celular: z.string().optional(),
+  mobilePhone: z.string().optional(),
   externalId: z.string().optional(),
   role: z.enum(["admin", "client"]),
   password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres").optional().or(z.literal('')),
@@ -97,13 +99,14 @@ export default function UsersPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const form = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
     defaultValues: {
       name: "",
       email: "",
-      celular: "",
+      mobilePhone: "",
       externalId: "",
       role: "client",
       password: ""
@@ -144,7 +147,7 @@ export default function UsersPage() {
         form.reset({
           name: editingUser.name,
           email: editingUser.email,
-          celular: editingUser.celular || "",
+          mobilePhone: editingUser.mobilePhone || "",
           externalId: editingUser.externalId || "",
           role: editingUser.role,
           password: ""
@@ -154,7 +157,7 @@ export default function UsersPage() {
         form.reset({
           name: "",
           email: "",
-          celular: "",
+          mobilePhone: "",
           externalId: "",
           role: "client",
           password: ""
@@ -237,7 +240,7 @@ export default function UsersPage() {
         const updatePayload = {
           name: data.name,
           email: data.email,
-          celular: data.celular || null,
+          mobilePhone: data.mobilePhone || null,
           externalId: data.externalId || null,
           role: data.role,
         };
@@ -274,7 +277,7 @@ export default function UsersPage() {
           body: JSON.stringify({
             name: data.name,
             email: data.email,
-            celular: data.celular || null,
+            mobilePhone: data.mobilePhone || null,
             externalId: data.externalId || null,
             role: data.role,
             password: data.password,
@@ -359,6 +362,85 @@ export default function UsersPage() {
     setIsDialogOpen(true);
   };
 
+  const handleStartConversation = async (user: User) => {
+    try {
+      // Load channels first
+      const channelsResponse = await fetch("/api/channels", { credentials: "include" });
+      if (!channelsResponse.ok) {
+        throw new Error("Erro ao carregar canais");
+      }
+      const { channels } = await channelsResponse.json();
+
+      // Check if conversation already exists
+      const checkResponse = await fetch(`/api/conversations`, {
+        credentials: "include",
+      });
+
+      if (!checkResponse.ok) {
+        throw new Error("Erro ao verificar conversas");
+      }
+
+      const { conversations } = await checkResponse.json();
+      const existingConv = conversations.find((c: any) => c.clientId === user.id);
+
+      if (existingConv) {
+        // Navigate to existing conversation with channel slug
+        const channel = channels.find((ch: any) => ch.id === existingConv.channelId);
+        if (channel?.slug) {
+          setLocation(`/conversation/${channel.slug}/${existingConv.id}`);
+        } else {
+          setLocation("/conversations");
+        }
+        toast({
+          title: "Conversa encontrada",
+          description: `Redirecionando para a conversa com ${user.name}.`,
+        });
+        return;
+      }
+
+      // Get default channel (first active channel)
+      const defaultChannel = channels.find((ch: any) => ch.isActive);
+      if (!defaultChannel) {
+        throw new Error("Nenhum canal ativo encontrado");
+      }
+
+      // Create new conversation
+      const response = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          clientId: user.id,
+          channelId: defaultChannel.id,
+          subject: `Conversa com ${user.name}`,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao criar conversa");
+      }
+
+      const { conversation } = await response.json();
+
+      toast({
+        title: "Conversa iniciada",
+        description: `Conversa com ${user.name} criada com sucesso.`,
+      });
+
+      if (defaultChannel.slug) {
+        setLocation(`/conversation/${defaultChannel.slug}/${conversation.id}`);
+      } else {
+        setLocation("/conversations");
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: error.message || "Não foi possível iniciar a conversa.",
+      });
+    }
+  };
+
   const formatLastActive = (date?: Date) => {
     if (!date) return "Nunca";
     try {
@@ -386,10 +468,10 @@ export default function UsersPage() {
       ),
     },
     {
-      key: "celular",
+      key: "mobilePhone",
       header: "Celular",
       render: (user) => (
-        <span className="text-sm">{user.celular || "-"}</span>
+        <span className="text-sm">{user.mobilePhone || "-"}</span>
       ),
     },
     {
@@ -421,6 +503,11 @@ export default function UsersPage() {
   ];
 
   const actions: DataListAction<User>[] = [
+    {
+      label: "Iniciar Conversa",
+      icon: <MessageCircle className="w-4 h-4 mr-2" />,
+      onClick: handleStartConversation,
+    },
     {
       label: "Editar",
       icon: <Pencil className="w-4 h-4 mr-2" />,
@@ -454,9 +541,9 @@ export default function UsersPage() {
         </Avatar>
         <h3 className="font-semibold text-lg leading-none mb-1">{user.name}</h3>
         <p className="text-sm text-muted-foreground mb-2">{user.email}</p>
-        {user.celular && (
+        {user.mobilePhone && (
           <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
-            <Phone className="w-3 h-3" /> {user.celular}
+            <Phone className="w-3 h-3" /> {user.mobilePhone}
           </p>
         )}
         
@@ -474,9 +561,20 @@ export default function UsersPage() {
           </div>
         </div>
         
-        <Button variant="outline" className="w-full text-xs h-8" onClick={() => handleEdit(user)}>
-          Gerenciar Perfil
-        </Button>
+        <div className="flex gap-2 w-full">
+          <Button 
+            variant="default" 
+            className="flex-1 text-xs h-8" 
+            onClick={() => handleStartConversation(user)}
+          >
+            <MessageCircle className="w-3 h-3 mr-1" />
+            Conversar
+          </Button>
+          <Button variant="outline" className="flex-1 text-xs h-8" onClick={() => handleEdit(user)}>
+            <Pencil className="w-3 h-3 mr-1" />
+            Editar
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -582,8 +680,8 @@ export default function UsersPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="celular">Celular</Label>
-                  <Input id="celular" {...form.register("celular")} placeholder="(00) 00000-0000" />
+                  <Label htmlFor="mobilePhone">Celular</Label>
+                  <Input id="mobilePhone" {...form.register("mobilePhone")} placeholder="(00) 00000-0000" />
                 </div>
                 
                 <div className="space-y-2">

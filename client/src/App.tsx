@@ -8,6 +8,7 @@ import AuthPage from "@/pages/auth";
 import Dashboard from "@/pages/home";
 import UsersPage from "@/pages/users";
 import ConversationsPage from "@/pages/conversations";
+import ChannelsPage from "@/pages/channels";
 import ResetPasswordPage from "@/pages/reset-password";
 import { AuthProvider, ProtectedRoute, useAuth } from "@/lib/auth";
 
@@ -35,7 +36,9 @@ function Router() {
       {/* Protected Routes */}
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/users" component={UsersPage} />
+      <ProtectedRoute path="/conversation/:channelSlug/:conversationId" component={ConversationsPage} />
       <ProtectedRoute path="/conversations" component={ConversationsPage} />
+      <ProtectedRoute path="/channels" component={ChannelsPage} />
       
       {/* Fallback */}
       <Route component={NotFound} />

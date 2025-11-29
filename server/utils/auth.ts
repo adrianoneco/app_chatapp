@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import bcrypt from "bcrypt";
+import argon2 from "argon2";
 import crypto from "crypto";
 
 declare module "express-session" {
@@ -27,11 +27,16 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
 };
 
 export const hashPassword = async (password: string): Promise<string> => {
-  return bcrypt.hash(password, 10);
+  return argon2.hash(password, {
+    type: argon2.argon2id,
+    memoryCost: 65536,
+    timeCost: 3,
+    parallelism: 4
+  });
 };
 
 export const comparePassword = async (password: string, hash: string): Promise<boolean> => {
-  return bcrypt.compare(password, hash);
+  return argon2.verify(hash, password);
 };
 
 export const generateResetToken = (): string => {

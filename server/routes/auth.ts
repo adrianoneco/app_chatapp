@@ -107,7 +107,7 @@ router.post("/recovery/check", async (req, res) => {
 
     const methods = await checkRecoveryMethods(
       user.email,
-      user.celular,
+      user.mobilePhone,
       user.externalId
     );
 
@@ -152,7 +152,7 @@ router.post("/forgot-password", async (req, res) => {
       
       const sent = await sendPasswordResetWhatsApp(
         user.email,
-        user.celular,
+        user.mobilePhone,
         user.externalId,
         user.name,
         token

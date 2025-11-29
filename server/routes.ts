@@ -7,6 +7,8 @@ import { webhookDispatcher } from "./middleware/webhookDispatcher";
 import authRoutes from "./routes/auth";
 import usersRoutes from "./routes/users";
 import avatarRoutes, { avatarStaticRouter } from "./routes/avatar";
+import { registerMessageRoutes } from "./routes/messages";
+import { registerChannelRoutes } from "./routes/channels";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -32,6 +34,8 @@ export async function registerRoutes(
   app.use("/api/users", usersRoutes);
   app.use("/api/avatars", avatarStaticRouter);
   app.use("/api/users/:id/avatar", avatarRoutes);
+  registerMessageRoutes(app);
+  registerChannelRoutes(app);
 
   return httpServer;
 }
